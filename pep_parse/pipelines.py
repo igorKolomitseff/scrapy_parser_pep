@@ -1,8 +1,9 @@
 import csv
 import datetime as dt
+import logging
 from collections import defaultdict
 
-from pep_parse.constants import (
+from pep_parse.settings import (
     BASE_DIR,
     FILE_DATETIME_FORMAT,
     STATUS_SUMMARY_OUTPUT_FILE,
@@ -10,10 +11,21 @@ from pep_parse.constants import (
 )
 
 PEP_TABLE_COLUMN_HEADERS = ('Статус', 'Количество')
+PEP_TABLE_FOOTER = 'Всего {total}'
+
+RESULTS_DIR_CREATED = 'Создана папка для результатов: {results_dir}'
 SUCCESS_FILE_CREATED = 'Файл с результатами был сохранён: {file_path}'
 
 
 class PepParsePipeline:
+    def __init__(self):
+        self.results_dir = BASE_DIR / RESULTS_DIR
+        if not self.results_dir.exists():
+            self.results_dir.mkdir()
+            logging.info(
+                RESULTS_DIR_CREATED.format(results_dir=self.results_dir)
+            )
+
     def open_spider(self, spider):
         self.results = defaultdict(int)
 
@@ -22,16 +34,20 @@ class PepParsePipeline:
         return item
 
     def close_spider(self, spider):
-        results_dir = BASE_DIR / RESULTS_DIR
-        results_dir.mkdir(exist_ok=True)
-        file_path = results_dir / STATUS_SUMMARY_OUTPUT_FILE.format(
+        file_path = self.results_dir / STATUS_SUMMARY_OUTPUT_FILE.format(
             now_formatted=dt.datetime.now().strftime(FILE_DATETIME_FORMAT)
         )
         with open(file_path, 'w', encoding='utf-8') as csv_file:
-            writer = csv.writer(csv_file, dialect=csv.unix_dialect)
+            writer = csv.writer(
+                csv_file,
+                dialect=csv.unix_dialect,
+                quoting=csv.QUOTE_NONE
+            )
             writer.writerows((
                 PEP_TABLE_COLUMN_HEADERS,
                 *self.results.items(),
-                ('Всего', sum(self.results.values()))
+                PEP_TABLE_FOOTER.format(
+                    total=sum(self.results.values())
+                ).split()
             ))
-        spider.logger.info(SUCCESS_FILE_CREATED.format(file_path=file_path))
+        logging.info(SUCCESS_FILE_CREATED.format(file_path=file_path))
