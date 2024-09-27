@@ -23,6 +23,7 @@ python3 -m venv venv
 source venv/bin/activate  # Для Linux и macOS
 source venv/Scripts/activate  # Для Windows
 ```
+
 3. Обновите pip и установите зависимости проекта:
 ```bash
 python3 -m pip install --upgrade pip
@@ -34,9 +35,7 @@ pip install -r requirements.txt
 scrapy crawl pep
 ```
 
-Результаты работы будут доступны в директории 
-[results](https://github.com/igorKolomitseff/scrapy_parser_pep/tree/main/results) 
-в файлах формата CSV.
+Результаты работы будут сохранены в директории results/ в файлах формата CSV.
 
 
 ### Автор
