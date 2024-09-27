@@ -5,11 +5,12 @@ from collections import defaultdict
 from pep_parse.constants import (
     BASE_DIR,
     FILE_DATETIME_FORMAT,
-    OUTPUT_FILE,
+    STATUS_SUMMARY_OUTPUT_FILE,
     RESULTS_DIR
 )
 
 PEP_TABLE_COLUMN_HEADERS = ('Статус', 'Количество')
+SUCCESS_FILE_CREATED = 'Файл с результатами был сохранён: {file_path}'
 
 
 class PepParsePipeline:
@@ -23,7 +24,7 @@ class PepParsePipeline:
     def close_spider(self, spider):
         results_dir = BASE_DIR / RESULTS_DIR
         results_dir.mkdir(exist_ok=True)
-        file_path = results_dir / OUTPUT_FILE.format(
+        file_path = results_dir / STATUS_SUMMARY_OUTPUT_FILE.format(
             now_formatted=dt.datetime.now().strftime(FILE_DATETIME_FORMAT)
         )
         with open(file_path, 'w', encoding='utf-8') as csv_file:
@@ -33,3 +34,4 @@ class PepParsePipeline:
                 *self.results.items(),
                 ('Всего', sum(self.results.values()))
             ))
+        spider.logger.info(SUCCESS_FILE_CREATED.format(file_path=file_path))
