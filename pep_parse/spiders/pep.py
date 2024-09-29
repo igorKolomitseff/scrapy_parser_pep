@@ -1,35 +1,18 @@
 import scrapy
 
 from pep_parse.items import PepParseItem
-
-
-NUMERICAL_INDEX_LINK_ERROR = (
-    'Ссылка на таблицу всех PEP '
-    'по номерам не найдена'
-)
+from pep_parse.settings import PEP_DOMAIN
 
 
 class PepSpider(scrapy.Spider):
     name = 'pep'
-    allowed_domains = ['peps.python.org']
-    start_urls = ['https://peps.python.org/']
+    allowed_domains = [PEP_DOMAIN]
+    start_urls = [f'https://{domain}/' for domain in allowed_domains]
 
     def parse(self, response):
-        numerical_index_link = response.xpath(
-            '//*[@id="numerical-index"]/h2/following-sibling::p/a/@href'
-        ).get()
-        if numerical_index_link is not None:
-            yield response.follow(
-                numerical_index_link,
-                callback=self.parse_numerical_index_pep_table
-            )
-        else:
-            self.logger.error(NUMERICAL_INDEX_LINK_ERROR)
-
-    def parse_numerical_index_pep_table(self, response):
-        for pep_link in response.xpath(
-            '//*[@id="numerical-index"]//table[contains(@class, '
-            '"pep-zero-table")]/tbody/tr/td[a][1]/a/@href'
+        for pep_link in response.css(
+            '#index-by-category table.pep-zero-table > tbody tr >'
+            'td:nth-of-type(2) > a::attr(href)'
         ).getall():
             yield response.follow(
                 pep_link,
@@ -37,16 +20,12 @@ class PepSpider(scrapy.Spider):
             )
 
     def parse_pep(self, response):
-        yield PepParseItem({
-            'number': int(response.xpath(
-                '//header/ul[@class="breadcrumbs"]/li[a[contains(., '
-                '"PEP Index")]]/following-sibling::li/text()'
-            ).get().replace('PEP ', '')),
-            'name': ''.join(response.xpath(
-                '//h1[@class="page-title"]//text()'
-            ).getall()),
-            'status': response.xpath(
-                '//dt[contains(., "Status")]/'
-                'following-sibling::dd[1]/abbr/text()'
+        yield PepParseItem(
+            number=response.css(
+                'header > ul.breadcrumbs > li:contains("PEP Index") + li::text'
+            ).get().replace('PEP ', ''),
+            name=''.join(response.css('h1.page-title *::text').getall()),
+            status=response.css(
+                'dt:contains("Status") + dd > abbr::text'
             ).get()
-        })
+        )
